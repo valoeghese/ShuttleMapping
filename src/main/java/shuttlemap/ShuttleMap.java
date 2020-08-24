@@ -75,14 +75,18 @@ public class ShuttleMap {
 						Optional<? extends MethodMapping> mojmapMethodEntry = mojmapEntry_.getMethodMapping(MethodSignature.of(intermediaryMethodEntry.obfName, intermediaryMethodEntry.signature));
 
 						if (mojmapMethodEntry.isPresent()) {
-							intermediaryMethodEntry.setFinalColumnMapping("mc_" + mojmapMethodEntry.get().getDeobfuscatedName());
+							if (intermediaryMethodEntry.getMappedName().startsWith("method")) {
+								intermediaryMethodEntry.setFinalColumnMapping("mc_" + mojmapMethodEntry.get().getDeobfuscatedName());
+							} else {
+								intermediaryMethodEntry.setFinalColumnMapping(mojmapMethodEntry.get().getDeobfuscatedName());
+							}
 						}
 
 						// Add to output
 						output.append("\n").append(intermediaryMethodEntry.toString());
 					});
 
-					writer.println(output.toString());
+							writer.println(output.toString());
 				}
 			});
 		} catch (FileNotFoundException | UnsupportedEncodingException e) {
