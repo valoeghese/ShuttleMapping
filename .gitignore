@@ -1,0 +1,10 @@
+.gradle
+build
+bin
+.project
+.settings
+out
+.classpath
+shuttle.tiny
+client.txt
+
