@@ -73,7 +73,7 @@ public class ShuttleMap {
 
 			classes(o2i).forEach(o2iClass -> {
 				StringBuilder output = new StringBuilder();
-				System.out.println("Mapping\t" + o2iClass);
+				System.out.println("Mapping\t" + o2iClass.getFullObfuscatedName());
 
 				// Add mojang name to intermediary class entry
 				Optional<? extends ClassMapping<?, ?>> opto2mClass = o2m.getClassMapping(o2iClass.getFullObfuscatedName());
