@@ -86,7 +86,7 @@ public class ShuttleMap {
 					// Process Fields
 					o2iClass.getFieldMappings().forEach(o2iField -> {
 						// Get field entry and set final column mapping
-						Optional<? extends FieldMapping> opto2mField = o2mClass.getFieldMapping(o2iField.getSignature());
+						Optional<? extends FieldMapping> opto2mField = o2mClass.computeFieldMapping(o2iField.getSignature());
 
 						if (opto2mField.isPresent()) {
 							FieldMapping o2mField = opto2mField.get();
@@ -113,7 +113,7 @@ public class ShuttleMap {
 						Optional<? extends MethodMapping> opto2mMethod = o2mClass.getMethodMapping(o2iMethod.getSignature());
 
 						if (opto2mMethod.isPresent()) {
-							String shuttlePrefix = o2iMethod.getFullDeobfuscatedName().startsWith("method") ? "mc_" : "";
+							String shuttlePrefix = o2iMethod.getDeobfuscatedName().startsWith("method") ? "mc_" : "";
 							MethodMapping o2mMethod = opto2mMethod.get();
 
 							output.append("\nMETHOD\t")
