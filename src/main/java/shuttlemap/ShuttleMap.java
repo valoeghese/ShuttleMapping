@@ -3,11 +3,13 @@
  */
 package shuttlemap;
 
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UncheckedIOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Optional;
@@ -16,6 +18,7 @@ import org.cadixdev.bombe.type.signature.FieldSignature;
 import org.cadixdev.bombe.type.signature.MethodSignature;
 import org.cadixdev.lorenz.MappingSet;
 import org.cadixdev.lorenz.io.proguard.ProGuardFormat;
+import org.cadixdev.lorenz.io.proguard.ProGuardReader;
 import org.cadixdev.lorenz.model.ClassMapping;
 import org.cadixdev.lorenz.model.FieldMapping;
 import org.cadixdev.lorenz.model.MethodMapping;
@@ -25,6 +28,25 @@ import tk.valoeghese.motjin.map.parser.ObfuscationMap;
 
 public class ShuttleMap {
 	public static void main(String[] args) throws MappingParseException, IOException {
+		MappingSet mojang = MappingSet.create();
+
+		try (BufferedReader clientBufferedReader = Files.newBufferedReader(Paths.get("./client.txt"), StandardCharsets.UTF_8);
+				BufferedReader serverBufferedReader = Files.newBufferedReader(Paths.get("./server.txt"), StandardCharsets.UTF_8)) {
+			try (ProGuardReader proGuardReaderClient = new ProGuardReader(clientBufferedReader);
+					ProGuardReader proGuardReaderServer = new ProGuardReader(serverBufferedReader)) {
+				proGuardReaderClient.read(mojang);
+				proGuardReaderServer.read(mojang);
+			}
+		}
+
+		mojang = mojang.reverse();
+
+		ObfuscationMap intermediary = ObfuscationMap.parseTiny("./mappings.tiny");
+
+		writeTiny("shuttle.tiny", intermediary, mojang);
+	}
+
+	public static void oldMain() throws MappingParseException, IOException {
 		MappingSet mojang = new ProGuardFormat().createReader(
 				Files.newInputStream(Paths.get("./client.txt")))
 				.read().reverse(); // official -> mojang
@@ -86,7 +108,7 @@ public class ShuttleMap {
 						output.append("\n").append(intermediaryMethodEntry.toString());
 					});
 
-							writer.println(output.toString());
+					writer.println(output.toString());
 				}
 			});
 		} catch (FileNotFoundException | UnsupportedEncodingException e) {
