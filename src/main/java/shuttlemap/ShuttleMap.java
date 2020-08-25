@@ -33,13 +33,13 @@ public class ShuttleMap {
 		MappingSet o2m = MappingSet.create();
 
 		try (BufferedReader clientBufferedReader = Files.newBufferedReader(Paths.get("./client.txt"), StandardCharsets.UTF_8);
-				//BufferedReader serverBufferedReader = Files.newBufferedReader(Paths.get("./server.txt"), StandardCharsets.UTF_8)
+				BufferedReader serverBufferedReader = Files.newBufferedReader(Paths.get("./server.txt"), StandardCharsets.UTF_8)
 				) {
 			try (ProGuardReader proGuardReaderClient = new ProGuardReader(clientBufferedReader);
-					//ProGuardReader proGuardReaderServer = new ProGuardReader(serverBufferedReader)
+					ProGuardReader proGuardReaderServer = new ProGuardReader(serverBufferedReader)
 					) {
 				proGuardReaderClient.read(o2m);
-				//				proGuardReaderServer.read(mojang); I don't think the server is strictly neccesary
+				proGuardReaderServer.read(mojang);// I don't think the server is strictly neccesary
 			}
 		}
 
