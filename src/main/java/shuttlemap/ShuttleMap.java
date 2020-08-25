@@ -39,7 +39,7 @@ public class ShuttleMap {
 					ProGuardReader proGuardReaderServer = new ProGuardReader(serverBufferedReader)
 					) {
 				proGuardReaderClient.read(o2m);
-				proGuardReaderServer.read(mojang);// I don't think the server is strictly neccesary
+				proGuardReaderServer.read(o2m);// I don't think the server is strictly neccesary
 			}
 		}
 
