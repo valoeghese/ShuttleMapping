@@ -12,7 +12,11 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import org.cadixdev.bombe.type.signature.FieldSignature;
 import org.cadixdev.bombe.type.signature.MethodSignature;
@@ -21,29 +25,35 @@ import org.cadixdev.lorenz.io.proguard.ProGuardFormat;
 import org.cadixdev.lorenz.io.proguard.ProGuardReader;
 import org.cadixdev.lorenz.model.ClassMapping;
 import org.cadixdev.lorenz.model.FieldMapping;
+import org.cadixdev.lorenz.model.InnerClassMapping;
 import org.cadixdev.lorenz.model.MethodMapping;
 
+import net.fabricmc.lorenztiny.TinyMappingFormat;
 import net.fabricmc.mapping.reader.v2.MappingParseException;
 import tk.valoeghese.motjin.map.parser.ObfuscationMap;
 
 public class ShuttleMap {
 	public static void main(String[] args) throws MappingParseException, IOException {
-		MappingSet mojang = MappingSet.create();
+		MappingSet o2m = MappingSet.create();
 
 		try (BufferedReader clientBufferedReader = Files.newBufferedReader(Paths.get("./client.txt"), StandardCharsets.UTF_8);
-				BufferedReader serverBufferedReader = Files.newBufferedReader(Paths.get("./server.txt"), StandardCharsets.UTF_8)) {
+				//BufferedReader serverBufferedReader = Files.newBufferedReader(Paths.get("./server.txt"), StandardCharsets.UTF_8)
+				) {
 			try (ProGuardReader proGuardReaderClient = new ProGuardReader(clientBufferedReader);
-					ProGuardReader proGuardReaderServer = new ProGuardReader(serverBufferedReader)) {
-				proGuardReaderClient.read(mojang);
-				proGuardReaderServer.read(mojang);
+					//ProGuardReader proGuardReaderServer = new ProGuardReader(serverBufferedReader)
+					) {
+				proGuardReaderClient.read(o2m);
+				//				proGuardReaderServer.read(mojang); I don't think the server is strictly neccesary
 			}
 		}
 
-		mojang = mojang.reverse();
+		o2m = o2m.reverse();
 
-		ObfuscationMap intermediary = ObfuscationMap.parseTiny("./mappings.tiny");
+		MappingSet o2i = TinyMappingFormat.LEGACY.read(
+				Paths.get("./mappings.tiny"),
+				"official", "intermediary");
 
-		writeTiny("shuttle.tiny", intermediary, mojang);
+		writeTinyLorenz("shuttle.tiny", o2i, o2m);
 	}
 
 	public static void oldMain() throws MappingParseException, IOException {
@@ -54,6 +64,117 @@ public class ShuttleMap {
 		ObfuscationMap intermediary = ObfuscationMap.parseTiny("./mappings.tiny");
 
 		writeTiny("shuttle.tiny", intermediary, mojang);
+	}
+
+	// from motjin
+	private static void writeTinyLorenz(String file, MappingSet o2i, MappingSet o2m) {
+		try (PrintWriter writer = new PrintWriter(file, "UTF-8")) {
+			writer.println("v1\tofficial\tintermediary\tnamed");
+
+			classes(o2i).forEach(o2iClass -> {
+				StringBuilder output = new StringBuilder();
+				System.out.println("Mapping\t" + o2iClass);
+
+				// Add mojang name to intermediary class entry
+				Optional<? extends ClassMapping<?, ?>> opto2mClass = o2m.getClassMapping(o2iClass.getFullObfuscatedName());
+
+				if (opto2mClass.isPresent()) {
+					// print out
+					output.append("CLASS\t" + o2iClass.getFullObfuscatedName() + "\t" + o2iClass.getFullDeobfuscatedName() + "\t" + opto2mClass.get().getFullDeobfuscatedName());
+					ClassMapping<?, ?> o2mClass = opto2mClass.get();
+
+					// Process Fields
+					o2iClass.getFieldMappings().forEach(o2iField -> {
+						// Get field entry and set final column mapping
+						Optional<? extends FieldMapping> opto2mField = o2mClass.getFieldMapping(o2iField.getSignature());
+
+						if (opto2mField.isPresent()) {
+							FieldMapping o2mField = opto2mField.get();
+
+							output.append("\nFIELD\t")
+							.append(o2iClass.getFullObfuscatedName()).append('\t')
+							.append(o2iField.getType().get()).append('\t')
+							.append(o2iField.getObfuscatedName()).append('\t')
+							.append(o2iField.getDeobfuscatedName()).append('\t')
+							.append(o2mField.getDeobfuscatedName()); // last line differs
+						} else {
+							output.append("\nFIELD\t")
+							.append(o2iClass.getFullObfuscatedName()).append('\t')
+							.append(o2iField.getType().get()).append('\t')
+							.append(o2iField.getObfuscatedName()).append('\t')
+							.append(o2iField.getDeobfuscatedName()).append('\t')
+							.append(o2iField.getDeobfuscatedName()); // last line differs
+						}
+					});
+
+					// Process Methods
+					o2iClass.getMethodMappings().forEach(o2iMethod -> {
+						// Get method entry and set final column mapping
+						Optional<? extends MethodMapping> opto2mMethod = o2mClass.getMethodMapping(o2iMethod.getSignature());
+
+						if (opto2mMethod.isPresent()) {
+							String shuttlePrefix = o2iMethod.getFullDeobfuscatedName().startsWith("method") ? "mc_" : "";
+							MethodMapping o2mMethod = opto2mMethod.get();
+
+							output.append("\nMETHOD\t")
+							.append(o2iClass.getFullObfuscatedName()).append('\t')
+							.append(o2iMethod.getDescriptor()).append('\t')
+							.append(o2iMethod.getObfuscatedName()).append('\t')
+							.append(o2iMethod.getDeobfuscatedName()).append('\t')
+							.append(shuttlePrefix + o2mMethod.getDeobfuscatedName()); // last line differs
+						} else {
+							output.append("\nMETHOD\t")
+							.append(o2iClass.getFullObfuscatedName()).append('\t')
+							.append(o2iMethod.getDescriptor()).append('\t')
+							.append(o2iMethod.getObfuscatedName()).append('\t')
+							.append(o2iMethod.getDeobfuscatedName()).append('\t')
+							.append(o2iMethod.getDeobfuscatedName()); // last line differs
+						}
+					});
+				} else {
+					// print out
+					output.append("CLASS\t" + o2iClass.getFullObfuscatedName() + "\t" + o2iClass.getFullDeobfuscatedName() + "\t" + o2iClass.getFullDeobfuscatedName());
+
+					// Process Fields
+					o2iClass.getFieldMappings().forEach(o2iField -> {
+						output.append("\nFIELD\t")
+						.append(o2iClass.getFullObfuscatedName()).append('\t')
+						.append(o2iField.getType().get()).append('\t')
+						.append(o2iField.getObfuscatedName()).append('\t')
+						.append(o2iField.getDeobfuscatedName()).append('\t')
+						.append(o2iField.getDeobfuscatedName());
+					});
+
+					// Process Methods
+					o2iClass.getMethodMappings().forEach(o2iMethod -> {
+						output.append("\nMETHOD\t")
+						.append(o2iClass.getFullObfuscatedName()).append('\t')
+						.append(o2iMethod.getDescriptor()).append('\t')
+						.append(o2iMethod.getObfuscatedName()).append('\t')
+						.append(o2iMethod.getDeobfuscatedName()).append('\t')
+						.append(o2iMethod.getDeobfuscatedName()); // last line differs
+					});
+				}
+
+				writer.println(output.toString());
+			});
+		} catch (FileNotFoundException | UnsupportedEncodingException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+
+	private static Stream<ClassMapping<?, ?>> classes(MappingSet map) {
+		List<ClassMapping<?, ?>> result = new ArrayList<>();
+		for (ClassMapping<?, ?> map_ : map.getTopLevelClassMappings()) ic(map_, result::add);
+		return result.stream();
+	}
+
+	private static void ic(ClassMapping<?, ?> preMap, Consumer<ClassMapping<?, ?>> callback) {
+		callback.accept(preMap);
+
+		for (InnerClassMapping map : preMap.getInnerClassMappings()) {
+			ic(map, callback);
+		}
 	}
 
 	// from motjin
