@@ -7,4 +7,4 @@ out
 .classpath
 shuttle.tiny
 client.txt
-#server.txt
+server.txt
